@@ -69,7 +69,7 @@ public class GetterSetterFinder {
 				zis.closeEntry();
 			}
 			zis.close();
-		}  catch (IOException e) {
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
@@ -97,6 +97,18 @@ public class GetterSetterFinder {
 
 	private static Method[] readMethod(JavaClass resultList) {
 		Method[] methods = resultList.getMethods();
+		findGetSet(methods);
 		return methods;
+	}
+
+	private static void findGetSet(Method[] methods) {
+		for (int i = 0; i < methods.length; i++) {
+			Method method =methods[i];
+			String uName = method.getName().toUpperCase();
+			if(uName.contains("GET")||uName.contains("SET")){
+				System.out.println(method.getName());
+				System.out.println("Find!!! GET!! or SET!!");
+			}
+		}
 	}
 }
