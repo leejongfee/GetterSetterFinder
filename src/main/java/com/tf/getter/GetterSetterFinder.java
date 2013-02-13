@@ -18,13 +18,26 @@ public class GetterSetterFinder {
 		List<JavaClass> classList = new ArrayList<JavaClass>();
 		GetterSetterFinder.findClasses(args[0], classList);
 
-		for (JavaClass j : classList) {
-			System.out.println("----------------------" + j.getClassName()
-					+ "----------------------");
-			Method[] methods = readMethod(j);
-			for (int i = 0; i < methods.length; i++) {
-				Method method = methods[i];
-				System.out.println(method);
+		for (JavaClass jc : classList) {
+			printGetSetters(jc);
+		}
+	}
+
+	private static void printGetSetters(JavaClass jc) {		
+		List<Method> getsetters = new ArrayList<Method>();
+
+		Method[] methods = jc.getMethods();
+		for (int i = 0; i < methods.length; i++) {
+			Method method = methods[i];
+			if(isGetter(method) || isSetter(method)) {
+				getsetters.add(method);
+			}
+		}
+
+		if(getsetters.size()>0) {
+			System.out.println("Class : "+jc.getClassName());
+			for(Method m : getsetters) {
+				System.out.println("\t"+m);
 			}
 		}
 	}
@@ -95,20 +108,11 @@ public class GetterSetterFinder {
 		}
 	}
 
-	private static Method[] readMethod(JavaClass resultList) {
-		Method[] methods = resultList.getMethods();
-		findGetSet(methods);
-		return methods;
+	private static boolean isGetter(Method m) {
+		return m.getName().startsWith("get");
 	}
 
-	private static void findGetSet(Method[] methods) {
-		for (int i = 0; i < methods.length; i++) {
-			Method method =methods[i];
-			String uName = method.getName().toUpperCase();
-			if(uName.contains("GET")||uName.contains("SET")){
-				System.out.println(method.getName());
-				System.out.println("Find!!! GET!! or SET!!");
-			}
-		}
+	private static boolean isSetter(Method m) {
+		return m.getName().startsWith("set");
 	}
 }
