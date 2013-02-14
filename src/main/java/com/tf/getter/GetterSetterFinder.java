@@ -17,27 +17,24 @@ public class GetterSetterFinder {
 	public static void main(String[] args) throws Exception {
 		List<JavaClass> classList = new ArrayList<JavaClass>();
 		GetterSetterFinder.findClasses(args[0], classList);
-
 		for (JavaClass jc : classList) {
-			printGetSetters(jc);
+			printPureGetSetters(jc);
 		}
 	}
 
-	private static void printGetSetters(JavaClass jc) {		
+	private static void printPureGetSetters(JavaClass jc) {
 		List<Method> getsetters = new ArrayList<Method>();
-
 		Method[] methods = jc.getMethods();
 		for (int i = 0; i < methods.length; i++) {
 			Method method = methods[i];
-			if(isGetter(method) || isSetter(method)) {
+			if (isPureGetter(method) || isPureSetter(method)) {
 				getsetters.add(method);
 			}
 		}
-
-		if(getsetters.size()>0) {
-			System.out.println("Class : "+jc.getClassName());
-			for(Method m : getsetters) {
-				System.out.println("\t"+m);
+		if (getsetters.size() > 0) {
+			System.out.println("Class : " + jc.getClassName());
+			for (Method m : getsetters) {
+				System.out.println("\t" + m);
 			}
 		}
 	}
@@ -108,11 +105,43 @@ public class GetterSetterFinder {
 		}
 	}
 
-	private static boolean isGetter(Method m) {
-		return m.getName().startsWith("get");
+	private static boolean isPureGetter(Method m) {
+		int code_Length = m.getCode().getCode().length;
+		int max_Stack = m.getCode().getMaxStack();
+		int max_Local = m.getCode().getMaxLocals();
+		String return_Type = m.getReturnType().toString();
+		boolean result = false;
+		if (return_Type != "void") {
+			if (return_Type.equals("double") || (return_Type.equals("long"))) {
+				if (code_Length == 5 && max_Stack == 2 && max_Local == 1
+						&& m.getName().startsWith("get")) {
+					result = true;
+				}
+			} else if (code_Length == 5 && max_Stack == 1 && max_Local == 1
+					&& m.getName().startsWith("get")) {
+				result = true;
+			}
+		}
+		return result;
 	}
 
-	private static boolean isSetter(Method m) {
-		return m.getName().startsWith("set");
+	private static boolean isPureSetter(Method m) {
+		int code_Length = m.getCode().getCode().length;
+		int max_Stack = m.getCode().getMaxStack();
+		int max_Local = m.getCode().getMaxLocals();
+		String return_Type = m.getReturnType().toString();
+		boolean result = false;
+		if (return_Type != "void") {
+			if (return_Type.equals("double") || (return_Type.equals("long"))) {
+				if (code_Length == 6 && max_Stack == 3 && max_Local == 3
+						&& m.getName().startsWith("set")) {
+					result = true;
+				}
+			} else if (code_Length == 6 && max_Stack == 2 && max_Local == 2
+					&& m.getName().startsWith("set")) {
+				result = true;
+			}
+		}
+		return result;
 	}
 }
