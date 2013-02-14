@@ -14,6 +14,9 @@ import org.apache.bcel.classfile.Method;
 import org.apache.bcel.generic.Type;
 
 public class GetterSetterFinder {
+	static int classesTotal;
+	static int methodsTotal;
+	static int getsetterTotal;
 
 	public static void main(String[] args) throws Exception {
 		List<JavaClass> classList = new ArrayList<JavaClass>();
@@ -21,6 +24,9 @@ public class GetterSetterFinder {
 		for (JavaClass jc : classList) {
 			printPureGetSetters(jc);
 		}
+		System.out.println("Total # of classes : " + classesTotal);
+		System.out.println("Total # of methods : " + methodsTotal);
+		System.out.println("Total # of pure getter/setters : " + getsetterTotal);
 	}
 
 	private static void printPureGetSetters(JavaClass jc) {
@@ -28,6 +34,7 @@ public class GetterSetterFinder {
 		Method[] methods = jc.getMethods();
 		for (int i = 0; i < methods.length; i++) {
 			Method method = methods[i];
+			methodsTotal++;
 			if (isPureGetter(method) || isPureSetter(method)) {
 				getsetters.add(method);
 			}
@@ -35,6 +42,7 @@ public class GetterSetterFinder {
 		if (getsetters.size() > 0) {
 			System.out.println("Class : " + jc.getClassName());
 			for (Method m : getsetters) {
+				getsetterTotal++;
 				System.out.println("\t" + m);
 			}
 		}
@@ -53,6 +61,7 @@ public class GetterSetterFinder {
 				} else if (f.isFile()) {
 					if (f.getName().endsWith(".class")) {
 						String filePath = f.getAbsolutePath();
+						classesTotal++;
 						parseClass(filePath, methodList);
 					}
 				}
@@ -75,6 +84,7 @@ public class GetterSetterFinder {
 			// ZipEntry가 있는 동안 반복
 			while ((ze = zis.getNextEntry()) != null) {
 				if (ze.getName().endsWith(".class")) {
+					classesTotal++;
 					parseClass(path, ze.getName(), resultList);
 				}
 				zis.closeEntry();
@@ -107,25 +117,23 @@ public class GetterSetterFinder {
 	}
 
 	private static boolean isPureGetter(Method m) {
-		int code_Length = m.getCode().getCode().length;
-		int max_Stack = m.getCode().getMaxStack();
-		int max_Local = m.getCode().getMaxLocals();
-		String return_Type = m.getReturnType().toString();
+		int codeLength = m.getCode().getCode().length;
+		int maxStack = m.getCode().getMaxStack();
+		int maxLocal = m.getCode().getMaxLocals();
+		Type returnType = m.getReturnType();
 		boolean result = false;
-		if (return_Type != "void") {
-			if (return_Type.equals("double") || (return_Type.equals("long"))) {
-				if (code_Length == 5 && max_Stack == 2 && max_Local == 1
+		if (returnType != Type.VOID) {
+			if (returnType == Type.DOUBLE || returnType == Type.LONG) {
+				if (codeLength == 5 && maxStack == 2 && maxLocal == 1
 						&& m.getName().startsWith("get")) {
 					result = true;
 				}
-			} else if (return_Type.equals("boolean")) {
-				if (code_Length == 5 && max_Stack == 1 && max_Local == 1
-						&& m.getName().startsWith("is")) {
-					result = true;
-
-				} else if (code_Length == 5 && max_Stack == 1 && max_Local == 1
-						&& m.getName().startsWith("get")) {
-					result = true;
+			} else if (returnType == Type.BOOLEAN) {
+				if (codeLength == 5 && maxStack == 1 && maxLocal == 1) {
+					if (m.getName().startsWith("get")
+							|| m.getName().startsWith("is")) {
+						result = true;
+					}
 				}
 			}
 		}
@@ -133,21 +141,20 @@ public class GetterSetterFinder {
 	}
 
 	private static boolean isPureSetter(Method m) {
-		int code_Length = m.getCode().getCode().length;
-		int max_Stack = m.getCode().getMaxStack();
-		int max_Local = m.getCode().getMaxLocals();
-		String return_Type = m.getReturnType().toString();
+		int codeLength = m.getCode().getCode().length;
+		int maxStack = m.getCode().getMaxStack();
+		int maxLocal = m.getCode().getMaxLocals();
+		Type returnType = m.getReturnType();
 		boolean result = false;
-		Type[] type = m.getArgumentTypes();
-		if (type.length == 1 && return_Type.equals("void")) {
-			String argument_Type = m.getArgumentTypes()[0].toString();
-			if (argument_Type.equals("double") || argument_Type.equals("long")
-					&& m.getName().startsWith("set")) {
-				if (code_Length == 6 && max_Stack == 3 && max_Local == 3) {
-					result = true;
+		Type[] argType = m.getArgumentTypes();
+		if (argType.length == 1 && Type.VOID == returnType) {
+			if (m.getName().startsWith("set")) {
+				if (Type.DOUBLE == argType[0] || Type.LONG == argType[0]) {
+					if (codeLength == 6 && maxStack == 3 && maxLocal == 3) {
+						result = true;
+					}
 				}
-			} else if (m.getName().startsWith("set")) {
-				if (code_Length == 6 && max_Stack == 2 && max_Local == 2) {
+				if (codeLength == 6 && maxStack == 2 && maxLocal == 2) {
 					result = true;
 				}
 			}
