@@ -11,6 +11,7 @@ import java.util.zip.ZipInputStream;
 import org.apache.bcel.classfile.ClassParser;
 import org.apache.bcel.classfile.JavaClass;
 import org.apache.bcel.classfile.Method;
+import org.apache.bcel.generic.Type;
 
 public class GetterSetterFinder {
 
@@ -117,9 +118,15 @@ public class GetterSetterFinder {
 						&& m.getName().startsWith("get")) {
 					result = true;
 				}
-			} else if (code_Length == 5 && max_Stack == 1 && max_Local == 1
-					&& m.getName().startsWith("get")) {
-				result = true;
+			} else if (return_Type.equals("boolean")) {
+				if (code_Length == 5 && max_Stack == 1 && max_Local == 1
+						&& m.getName().startsWith("is")) {
+					result = true;
+
+				} else if (code_Length == 5 && max_Stack == 1 && max_Local == 1
+						&& m.getName().startsWith("get")) {
+					result = true;
+				}
 			}
 		}
 		return result;
@@ -131,15 +138,18 @@ public class GetterSetterFinder {
 		int max_Local = m.getCode().getMaxLocals();
 		String return_Type = m.getReturnType().toString();
 		boolean result = false;
-		if (return_Type != "void") {
-			if (return_Type.equals("double") || (return_Type.equals("long"))) {
-				if (code_Length == 6 && max_Stack == 3 && max_Local == 3
-						&& m.getName().startsWith("set")) {
+		Type[] type = m.getArgumentTypes();
+		if (type.length == 1 && return_Type.equals("void")) {
+			String argument_Type = m.getArgumentTypes()[0].toString();
+			if (argument_Type.equals("double") || argument_Type.equals("long")
+					&& m.getName().startsWith("set")) {
+				if (code_Length == 6 && max_Stack == 3 && max_Local == 3) {
 					result = true;
 				}
-			} else if (code_Length == 6 && max_Stack == 2 && max_Local == 2
-					&& m.getName().startsWith("set")) {
-				result = true;
+			} else if (m.getName().startsWith("set")) {
+				if (code_Length == 6 && max_Stack == 2 && max_Local == 2) {
+					result = true;
+				}
 			}
 		}
 		return result;
