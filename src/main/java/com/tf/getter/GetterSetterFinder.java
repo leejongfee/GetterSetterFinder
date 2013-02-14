@@ -9,6 +9,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import org.apache.bcel.classfile.ClassParser;
+import org.apache.bcel.classfile.Code;
 import org.apache.bcel.classfile.JavaClass;
 import org.apache.bcel.classfile.Method;
 import org.apache.bcel.generic.Type;
@@ -22,11 +23,14 @@ public class GetterSetterFinder {
 		List<JavaClass> classList = new ArrayList<JavaClass>();
 		GetterSetterFinder.findClasses(args[0], classList);
 		for (JavaClass jc : classList) {
-			printPureGetSetters(jc);
+			if (jc.isAbstract() || jc.isInterface()) {
+			} else
+				printPureGetSetters(jc);
 		}
 		System.out.println("Total # of classes : " + classesTotal);
 		System.out.println("Total # of methods : " + methodsTotal);
-		System.out.println("Total # of pure getter/setters : " + getsetterTotal);
+		System.out
+				.println("Total # of pure getter/setters : " + getsetterTotal);
 	}
 
 	private static void printPureGetSetters(JavaClass jc) {
@@ -43,7 +47,7 @@ public class GetterSetterFinder {
 			System.out.println("Class : " + jc.getClassName());
 			for (Method m : getsetters) {
 				getsetterTotal++;
-				System.out.println("\t" + m);
+				System.out.println("/t" + m);
 			}
 		}
 	}
@@ -77,11 +81,11 @@ public class GetterSetterFinder {
 
 	private static void readZip(String path, List<JavaClass> resultList) {
 		try {
-			// FileInputStream¿∏∑Œ ∆ƒ¿œ¿ª ¿–¿∫ »ƒ ZipInputStream¿∏∑Œ ∫Ø»Ø
+			// FileInputStreamÏúºÎ°ú ÌååÏùºÏùÑ ÏùΩÏùÄ ÌõÑ ZipInputStreamÏúºÎ°ú Î≥ÄÌôò
 			FileInputStream fis = new FileInputStream(path);
 			ZipInputStream zis = new ZipInputStream(fis);
 			ZipEntry ze;
-			// ZipEntry∞° ¿÷¥¬ µøæ» π›∫π
+			// ZipEntryÍ∞Ä ÏûàÎäî ÎèôÏïà Î∞òÎ≥µ
 			while ((ze = zis.getNextEntry()) != null) {
 				if (ze.getName().endsWith(".class")) {
 					classesTotal++;
@@ -117,22 +121,25 @@ public class GetterSetterFinder {
 	}
 
 	private static boolean isPureGetter(Method m) {
-		int codeLength = m.getCode().getCode().length;
-		int maxStack = m.getCode().getMaxStack();
-		int maxLocal = m.getCode().getMaxLocals();
-		Type returnType = m.getReturnType();
 		boolean result = false;
-		if (returnType != Type.VOID) {
-			if (returnType == Type.DOUBLE || returnType == Type.LONG) {
-				if (codeLength == 5 && maxStack == 2 && maxLocal == 1
-						&& m.getName().startsWith("get")) {
-					result = true;
-				}
-			} else if (returnType == Type.BOOLEAN) {
-				if (codeLength == 5 && maxStack == 1 && maxLocal == 1) {
-					if (m.getName().startsWith("get")
-							|| m.getName().startsWith("is")) {
+		if (!m.isNative()) {
+			Code code=m.getCode();
+			int codeLength = code.getCode().length;
+			int maxStack = code.getMaxStack();
+			int maxLocal = code.getMaxLocals();
+			Type returnType = m.getReturnType();
+			if (returnType != Type.VOID) {
+				if (returnType == Type.DOUBLE || returnType == Type.LONG) {
+					if (codeLength == 5 && maxStack == 2 && maxLocal == 1
+							&& m.getName().startsWith("get")) {
 						result = true;
+					}
+				} else if (returnType == Type.BOOLEAN) {
+					if (codeLength == 5 && maxStack == 1 && maxLocal == 1) {
+						if (m.getName().startsWith("get")
+								|| m.getName().startsWith("is")) {
+							result = true;
+						}
 					}
 				}
 			}
@@ -141,21 +148,24 @@ public class GetterSetterFinder {
 	}
 
 	private static boolean isPureSetter(Method m) {
-		int codeLength = m.getCode().getCode().length;
-		int maxStack = m.getCode().getMaxStack();
-		int maxLocal = m.getCode().getMaxLocals();
-		Type returnType = m.getReturnType();
 		boolean result = false;
-		Type[] argType = m.getArgumentTypes();
-		if (argType.length == 1 && Type.VOID == returnType) {
-			if (m.getName().startsWith("set")) {
-				if (Type.DOUBLE == argType[0] || Type.LONG == argType[0]) {
-					if (codeLength == 6 && maxStack == 3 && maxLocal == 3) {
+		if (!m.isNative()) {
+			Code code=m.getCode();
+			int codeLength = code.getCode().length;
+			int maxStack = code.getMaxStack();
+			int maxLocal = code.getMaxLocals();
+			Type returnType = m.getReturnType();
+			Type[] argType = m.getArgumentTypes();
+			if (argType.length == 1 && Type.VOID == returnType) {
+				if (m.getName().startsWith("set")) {
+					if (Type.DOUBLE == argType[0] || Type.LONG == argType[0]) {
+						if (codeLength == 6 && maxStack == 3 && maxLocal == 3) {
+							result = true;
+						}
+					}
+					if (codeLength == 6 && maxStack == 2 && maxLocal == 2) {
 						result = true;
 					}
-				}
-				if (codeLength == 6 && maxStack == 2 && maxLocal == 2) {
-					result = true;
 				}
 			}
 		}
