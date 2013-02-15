@@ -47,7 +47,7 @@ public class GetterSetterFinder {
 			System.out.println("Class : " + jc.getClassName());
 			for (Method m : getsetters) {
 				getsetterTotal++;
-				System.out.println("/t" + m);
+				System.out.println("\t" + m);
 			}
 		}
 	}
@@ -122,8 +122,8 @@ public class GetterSetterFinder {
 
 	private static boolean isPureGetter(Method m) {
 		boolean result = false;
-		if (!m.isNative()) {
-			Code code=m.getCode();
+		if (!m.isNative() || !m.isProtected()) {
+			Code code = m.getCode();
 			int codeLength = code.getCode().length;
 			int maxStack = code.getMaxStack();
 			int maxLocal = code.getMaxLocals();
@@ -149,8 +149,8 @@ public class GetterSetterFinder {
 
 	private static boolean isPureSetter(Method m) {
 		boolean result = false;
-		if (!m.isNative()) {
-			Code code=m.getCode();
+		if (!m.isNative() || !m.isProtected()) {
+			Code code = m.getCode();
 			int codeLength = code.getCode().length;
 			int maxStack = code.getMaxStack();
 			int maxLocal = code.getMaxLocals();
