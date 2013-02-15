@@ -24,8 +24,9 @@ public class GetterSetterFinder {
 		GetterSetterFinder.findClasses(args[0], classList);
 		for (JavaClass jc : classList) {
 			if (jc.isAbstract() || jc.isInterface()) {
-			} else
-				printPureGetSetters(jc);
+			} else {
+				 printPureGetSetters(jc);
+			}
 		}
 		System.out.println("Total # of classes : " + classesTotal);
 		System.out.println("Total # of methods : " + methodsTotal);
@@ -33,7 +34,25 @@ public class GetterSetterFinder {
 				.println("Total # of pure getter/setters : " + getsetterTotal);
 	}
 
-	private static void printPureGetSetters(JavaClass jc) {
+	static void printSpecificMethod(JavaClass jc, String methodName) {
+		List<Method> getsetters = new ArrayList<Method>();
+		Method[] methods = jc.getMethods();
+		for (int i = 0; i < methods.length; i++) {
+			Method method = methods[i];
+			if (isSpecificMethod(method,methodName)) {
+				getsetters.add(method);
+			}
+		}
+		if (getsetters.size() > 0) {
+			System.out.println("Class : " + jc.getClassName());
+			for (Method m : getsetters) {
+				getsetterTotal++;
+				System.out.println("\t" + m);
+			}
+		}
+	}
+
+	static void printPureGetSetters(JavaClass jc) {
 		List<Method> getsetters = new ArrayList<Method>();
 		Method[] methods = jc.getMethods();
 		for (int i = 0; i < methods.length; i++) {
@@ -52,8 +71,8 @@ public class GetterSetterFinder {
 		}
 	}
 
-	private static void findClasses(String dirOrZipPath,
-			List<JavaClass> methodList) throws Exception {
+	static void findClasses(String dirOrZipPath, List<JavaClass> methodList)
+			throws Exception {
 		File file = new File(dirOrZipPath);
 		String fName = file.getName().toUpperCase();
 		if (file.isDirectory()) {
@@ -122,7 +141,7 @@ public class GetterSetterFinder {
 
 	private static boolean isPureGetter(Method m) {
 		boolean result = false;
-		if (!m.isNative() || !m.isProtected()) {
+		if (!m.isNative() && !m.isVolatile()) {
 			Code code = m.getCode();
 			int codeLength = code.getCode().length;
 			int maxStack = code.getMaxStack();
@@ -136,10 +155,13 @@ public class GetterSetterFinder {
 					}
 				} else if (returnType == Type.BOOLEAN) {
 					if (codeLength == 5 && maxStack == 1 && maxLocal == 1) {
-						if (m.getName().startsWith("get")
-								|| m.getName().startsWith("is")) {
+						if (m.getName().startsWith("is")) {
 							result = true;
 						}
+					}
+				} else if (codeLength == 5 && maxStack == 1 && maxLocal == 1) {
+					if (m.getName().startsWith("get")) {
+						result = true;
 					}
 				}
 			}
@@ -149,7 +171,8 @@ public class GetterSetterFinder {
 
 	private static boolean isPureSetter(Method m) {
 		boolean result = false;
-		if (!m.isNative() || !m.isProtected()) {
+		Code code2 = m.getCode();
+		if (code2 != null) {
 			Code code = m.getCode();
 			int codeLength = code.getCode().length;
 			int maxStack = code.getMaxStack();
@@ -168,6 +191,30 @@ public class GetterSetterFinder {
 					}
 				}
 			}
+		}
+		return result;
+	}
+
+	private static boolean isSpecificMethod(Method m, String methodName) {
+		Code c = m.getCode();
+		String codeTxt = c.toString();
+		boolean result = false;
+		while (true) {
+			int index = codeTxt.indexOf("invoke");
+			if (index > 0) {
+				codeTxt = codeTxt.substring(index);
+				int endPoint = codeTxt.indexOf("(");
+				codeTxt = codeTxt.substring(0, endPoint - 1);
+				int startPoint = codeTxt.lastIndexOf(".") + 1;
+				if (startPoint > 0) {
+					codeTxt = codeTxt.substring(startPoint);
+				}
+				if (codeTxt.equals(methodName)) {
+					result = true;
+					break;
+				}
+			} else
+				break;
 		}
 		return result;
 	}
