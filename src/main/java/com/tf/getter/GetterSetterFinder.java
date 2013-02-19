@@ -25,7 +25,7 @@ public class GetterSetterFinder {
 		for (JavaClass jc : classList) {
 			if (jc.isAbstract() || jc.isInterface()) {
 			} else {
-				 printPureGetSetters(jc);
+				printPureGetSetters(jc);
 			}
 		}
 		System.out.println("Total # of classes : " + classesTotal);
@@ -34,39 +34,43 @@ public class GetterSetterFinder {
 				.println("Total # of pure getter/setters : " + getsetterTotal);
 	}
 
-	static void printSpecificMethod(JavaClass jc, String methodName) {
-		List<Method> getsetters = new ArrayList<Method>();
-		Method[] methods = jc.getMethods();
-		for (int i = 0; i < methods.length; i++) {
-			Method method = methods[i];
-			if (isSpecificMethod(method,methodName)) {
-				getsetters.add(method);
-			}
-		}
-		if (getsetters.size() > 0) {
-			System.out.println("Class : " + jc.getClassName());
-			for (Method m : getsetters) {
-				getsetterTotal++;
-				System.out.println("\t" + m);
-			}
-		}
-	}
-
 	static void printPureGetSetters(JavaClass jc) {
 		List<Method> getsetters = new ArrayList<Method>();
 		Method[] methods = jc.getMethods();
 		for (int i = 0; i < methods.length; i++) {
 			Method method = methods[i];
 			methodsTotal++;
-			if (isPureGetter(method) || isPureSetter(method)) {
+			if (isPureSetter(method) || isPureGetter(method)) {
 				getsetters.add(method);
 			}
 		}
+		findOnlyGetter(getsetters);
 		if (getsetters.size() > 0) {
 			System.out.println("Class : " + jc.getClassName());
-			for (Method m : getsetters) {
+			for (Method m1 : getsetters) {
 				getsetterTotal++;
-				System.out.println("\t" + m);
+				System.out.println("\t" + m1.getName());
+			}
+		}
+	}
+
+	static void findOnlyGetter(List<Method> getsetters) {
+		for (int i = 0; i < getsetters.size(); i++) {
+			String name = getsetters.get(i).getName();
+			if (name.startsWith("get")) {
+				boolean same = true;
+				for (int j = 0; j < getsetters.size(); j++) {
+					String name2 = getsetters.get(j).getName();
+					if (!name.equals(name2)) {
+						if (name.substring(3).equals(name2.substring(3))) {
+							same = false;
+							break;
+						}
+					}
+				}
+				if (same == true) {
+					getsetters.remove(i);
+				}
 			}
 		}
 	}
@@ -77,15 +81,17 @@ public class GetterSetterFinder {
 		String fName = file.getName().toUpperCase();
 		if (file.isDirectory()) {
 			File[] files = file.listFiles();
-			for (int i = 0; i < files.length; i++) {
-				File f = files[i];
-				if (f.isDirectory()) {
-					findClasses(f.getCanonicalPath(), methodList);
-				} else if (f.isFile()) {
-					if (f.getName().endsWith(".class")) {
-						String filePath = f.getAbsolutePath();
-						classesTotal++;
-						parseClass(filePath, methodList);
+			if (files != null) {
+				for (int i = 0; i < files.length; i++) {
+					File f = files[i];
+					if (f.isDirectory()) {
+						findClasses(f.getCanonicalPath(), methodList);
+					} else if (f.isFile()) {
+						if (f.getName().endsWith(".class")) {
+							String filePath = f.getAbsolutePath();
+							classesTotal++;
+							parseClass(filePath, methodList);
+						}
 					}
 				}
 			}
@@ -98,17 +104,17 @@ public class GetterSetterFinder {
 		}
 	}
 
-	private static void readZip(String path, List<JavaClass> resultList) {
+	private static void readZip(String path, List<JavaClass> methodList) {
 		try {
-			// FileInputStreamìœ¼ë¡œ íŒŒì¼ì„ ì½ì€ í›„ ZipInputStreamìœ¼ë¡œ ë³€í™˜
+			// FileInputStreamÀ¸·Î ÆÄÀÏÀ» ÀĞÀº ÈÄ ZipInputStreamÀ¸·Î º¯È¯
 			FileInputStream fis = new FileInputStream(path);
 			ZipInputStream zis = new ZipInputStream(fis);
 			ZipEntry ze;
-			// ZipEntryê°€ ìˆëŠ” ë™ì•ˆ ë°˜ë³µ
+			// ZipEntry°¡ ÀÖ´Â µ¿¾È ¹İº¹
 			while ((ze = zis.getNextEntry()) != null) {
 				if (ze.getName().endsWith(".class")) {
 					classesTotal++;
-					parseClass(path, ze.getName(), resultList);
+					parseClass(path, ze.getName(), methodList);
 				}
 				zis.closeEntry();
 			}
@@ -119,21 +125,21 @@ public class GetterSetterFinder {
 	}
 
 	private static void parseClass(String zipFilePath, String classFilePath,
-			List<JavaClass> resultList) {
+			List<JavaClass> methodList) {
 		try {
 			JavaClass classz = new ClassParser(zipFilePath, classFilePath)
 					.parse();
-			resultList.add(classz);
+			methodList.add(classz);
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
 	}
 
 	private static void parseClass(String classFilePath,
-			List<JavaClass> resultList) {
+			List<JavaClass> methodList) {
 		try {
 			JavaClass classz = new ClassParser(classFilePath).parse();
-			resultList.add(classz);
+			methodList.add(classz);
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
@@ -191,30 +197,6 @@ public class GetterSetterFinder {
 					}
 				}
 			}
-		}
-		return result;
-	}
-
-	private static boolean isSpecificMethod(Method m, String methodName) {
-		Code c = m.getCode();
-		String codeTxt = c.toString();
-		boolean result = false;
-		while (true) {
-			int index = codeTxt.indexOf("invoke");
-			if (index > 0) {
-				codeTxt = codeTxt.substring(index);
-				int endPoint = codeTxt.indexOf("(");
-				codeTxt = codeTxt.substring(0, endPoint - 1);
-				int startPoint = codeTxt.lastIndexOf(".") + 1;
-				if (startPoint > 0) {
-					codeTxt = codeTxt.substring(startPoint);
-				}
-				if (codeTxt.equals(methodName)) {
-					result = true;
-					break;
-				}
-			} else
-				break;
 		}
 		return result;
 	}
