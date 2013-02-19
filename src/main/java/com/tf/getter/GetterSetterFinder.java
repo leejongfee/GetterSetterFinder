@@ -106,11 +106,9 @@ public class GetterSetterFinder {
 
 	private static void readZip(String path, List<JavaClass> methodList) {
 		try {
-			// FileInputStream으로 파일을 읽은 후 ZipInputStream으로 변환
 			FileInputStream fis = new FileInputStream(path);
 			ZipInputStream zis = new ZipInputStream(fis);
 			ZipEntry ze;
-			// ZipEntry가 있는 동안 반복
 			while ((ze = zis.getNextEntry()) != null) {
 				if (ze.getName().endsWith(".class")) {
 					classesTotal++;
