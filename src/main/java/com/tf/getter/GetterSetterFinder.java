@@ -57,16 +57,27 @@ public class GetterSetterFinder {
 
 	static boolean isOnlygetter(Method[] methods, Method method) {
 		boolean result = false;
-		String name1 = method.getName();
+		String methodName = method.getName();
 		for (int i = 0; i < methods.length; i++) {
-			String name2 = methods[i].getName();
-			if (!name1.equals(name2)) {
-				if (name2.startsWith("get") || name2.startsWith("set")) {
-					if (name1.substring(3).equals(name2.substring(3))) {
+			String compareName = methods[i].getName();
+			if (methodName.startsWith("is")) {
+				if (compareName.startsWith("get") || compareName.startsWith("set")) {
+					if (methodName.substring(2).equals(compareName.substring(3))) {
 						result = true;
 					}
-				} else if (name2.startsWith("is")) {
-					if (name1.substring(3).equals(name2.substring(2))) {
+				} else if (compareName.startsWith("is")) {
+					if (methodName.substring(3).equals(compareName.substring(2))) {
+						result = true;
+					}
+				}
+			}
+			if (!methodName.equals(compareName)) {
+				if (compareName.startsWith("get") || compareName.startsWith("set")) {
+					if (methodName.substring(3).equals(compareName.substring(3))) {
+						result = true;
+					}
+				} else if (compareName.startsWith("is")) {
+					if (methodName.substring(3).equals(compareName.substring(2))) {
 						result = true;
 					}
 				}
