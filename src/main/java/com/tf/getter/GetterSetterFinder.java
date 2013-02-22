@@ -41,10 +41,11 @@ public class GetterSetterFinder {
 			Method method = methods[i];
 			methodsTotal++;
 			if (isPureSetter(method) || isPureGetter(method)) {
-				getsetters.add(method);
+				if (isOnlygetter(methods, method)) {
+					getsetters.add(method);
+				}
 			}
 		}
-		findOnlyGetter(getsetters);
 		if (getsetters.size() > 0) {
 			System.out.println("Class : " + jc.getClassName());
 			for (Method m1 : getsetters) {
@@ -54,25 +55,24 @@ public class GetterSetterFinder {
 		}
 	}
 
-	static void findOnlyGetter(List<Method> getsetters) {
-		for (int i = 0; i < getsetters.size(); i++) {
-			String name = getsetters.get(i).getName();
-			if (name.startsWith("get")) {
-				boolean same = true;
-				for (int j = 0; j < getsetters.size(); j++) {
-					String name2 = getsetters.get(j).getName();
-					if (!name.equals(name2)) {
-						if (name.substring(3).equals(name2.substring(3))) {
-							same = false;
-							break;
-						}
+	static boolean isOnlygetter(Method[] methods, Method method) {
+		boolean result = false;
+		String name1 = method.getName();
+		for (int i = 0; i < methods.length; i++) {
+			String name2 = methods[i].getName();
+			if (!name1.equals(name2)) {
+				if (name2.startsWith("get") || name2.startsWith("set")) {
+					if (name1.substring(3).equals(name2.substring(3))) {
+						result = true;
 					}
-				}
-				if (same == true) {
-					getsetters.remove(i);
+				} else if (name2.startsWith("is")) {
+					if (name1.substring(3).equals(name2.substring(2))) {
+						result = true;
+					}
 				}
 			}
 		}
+		return result;
 	}
 
 	static void findClasses(String dirOrZipPath, List<JavaClass> methodList)
