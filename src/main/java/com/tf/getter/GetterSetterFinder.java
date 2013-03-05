@@ -3,12 +3,9 @@ package com.tf.getter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -23,12 +20,6 @@ public class GetterSetterFinder {
 	static int classesTotal;
 	static int methodsTotal;
 	static int getsetterTotal;
-	static PkgInfo[] p = new PkgInfo[0];
-
-	public class PkgInfo {
-		int count;
-		String pkgName;
-	}
 
 	public static void main(String[] args) throws Exception {
 		List<JavaClass> classList = new ArrayList<JavaClass>();
