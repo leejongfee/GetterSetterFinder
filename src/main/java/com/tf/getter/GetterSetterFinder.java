@@ -3,7 +3,12 @@ package com.tf.getter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -18,66 +23,105 @@ public class GetterSetterFinder {
 	static int classesTotal;
 	static int methodsTotal;
 	static int getsetterTotal;
+	static PkgInfo[] p = new PkgInfo[0];
+
+	public class PkgInfo {
+		int count;
+		String pkgName;
+	}
 
 	public static void main(String[] args) throws Exception {
 		List<JavaClass> classList = new ArrayList<JavaClass>();
+		List<String> packageNames = new ArrayList<String>();
 		GetterSetterFinder.findClasses(args[0], classList);
 		for (JavaClass jc : classList) {
-			if (jc.isAbstract() || jc.isInterface()) {
+			if (jc.isInterface()) {
 			} else {
-				printPureGetSetters(jc);
+				printPureGetSetters(jc, packageNames);
 			}
 		}
 		System.out.println("Total # of classes : " + classesTotal);
 		System.out.println("Total # of methods : " + methodsTotal);
 		System.out
 				.println("Total # of pure getter/setters : " + getsetterTotal);
+		System.out
+				.println("------getter/setters methods were classified as package.------");
+
+		sortPackage(packageNames);
 	}
 
-	static void printPureGetSetters(JavaClass jc) {
+	private static void printPureGetSetters(JavaClass jc,
+			List<String> packageNames) {
 		List<Method> getsetters = new ArrayList<Method>();
 		Method[] methods = jc.getMethods();
 		for (int i = 0; i < methods.length; i++) {
 			Method method = methods[i];
 			methodsTotal++;
-			if (isPureSetter(method) || isPureGetter(method)) {
-				if (isOnlygetter(methods, method)) {
-					getsetters.add(method);
+			if (!method.isAbstract()) {
+				if (isPureSetter(method) || isPureGetter(method)) {
+					if (isOnlygetter(methods, method)) {
+						getsetterTotal++;
+						getsetters.add(method);
+					}
 				}
 			}
 		}
 		if (getsetters.size() > 0) {
 			System.out.println("Class : " + jc.getClassName());
-			for (Method m1 : getsetters) {
-				getsetterTotal++;
-				System.out.println("\t" + m1.getName());
+			for (Method m : getsetters) {
+				packageNames.add(jc.getPackageName());
+				System.out.println("\t" + m.getName());
 			}
 		}
 	}
 
-	static boolean isOnlygetter(Method[] methods, Method method) {
+	private static void sortPackage(List<String> packageNames) {
+		List<String> listTemp = new ArrayList<String>();
+		for (int i = 0; i < packageNames.size(); i++) {
+			String pkgName = packageNames.get(i);
+			String count = String.format("%010d",
+					Collections.frequency(packageNames, pkgName));
+			listTemp.add(count + packageNames.get(i));
+		}
+		ArrayList<String> sortResult = new ArrayList<String>(
+				new HashSet<String>(listTemp));
+		Collections.sort(sortResult);
+		Collections.reverse(sortResult);
+		for (int j = 0; j < sortResult.size(); j++) {
+			int count = Integer.valueOf(sortResult.get(j).substring(0, 10));
+			System.out.println(sortResult.get(j).substring(10) + " : " + count);
+		}
+	}
+
+	private static boolean isOnlygetter(Method[] methods, Method method) {
 		boolean result = false;
 		String methodName = method.getName();
 		for (int i = 0; i < methods.length; i++) {
 			String compareName = methods[i].getName();
 			if (methodName.startsWith("is")) {
-				if (compareName.startsWith("get") || compareName.startsWith("set")) {
-					if (methodName.substring(2).equals(compareName.substring(3))) {
+				if (compareName.startsWith("get")
+						|| compareName.startsWith("set")) {
+					if (methodName.substring(2)
+							.equals(compareName.substring(3))) {
 						result = true;
 					}
 				} else if (compareName.startsWith("is")) {
-					if (methodName.substring(3).equals(compareName.substring(2))) {
+					if (methodName.substring(3)
+							.equals(compareName.substring(2))) {
 						result = true;
 					}
 				}
 			}
 			if (!methodName.equals(compareName)) {
-				if (compareName.startsWith("get") || compareName.startsWith("set")) {
-					if (methodName.substring(3).equals(compareName.substring(3))) {
+				if (compareName.startsWith("get")
+						|| compareName.startsWith("set")) {
+					if (methodName.substring(3)
+							.equals(compareName.substring(3))) {
 						result = true;
 					}
 				} else if (compareName.startsWith("is")) {
-					if (methodName.substring(3).equals(compareName.substring(2))) {
+					if (methodName.substring(3)
+							.equals(compareName.substring(2))) {
 						result = true;
 					}
 				}
