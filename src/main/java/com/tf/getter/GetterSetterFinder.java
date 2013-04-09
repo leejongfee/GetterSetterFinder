@@ -23,23 +23,52 @@ public class GetterSetterFinder {
 
 	public static void main(String[] args) throws Exception {
 		List<JavaClass> classList = new ArrayList<JavaClass>();
-		List<MethodInfo> overriddenMethodList = new ArrayList<MethodInfo>();
-		List<MethodInfo[]> getSetList = new ArrayList<MethodInfo[]>();
+		List<InheritanceInfo> InheritanceList = new ArrayList<InheritanceInfo>();
+		List<GetSetInfo> getSetList = new ArrayList<GetSetInfo>();
 		List<String> packageNameList = new ArrayList<String>();
 		List<String> classNameList = new ArrayList<String>();
 		List<String> methodNameList = new ArrayList<String>();
 		GetterSetterFinder.findClasses(args[0], classList);
-		findSubClass(classList, overriddenMethodList);
+
+		findSubClass(classList, InheritanceList);
 		findPureGetterSetter(classList, getSetList);
-
-		for (int i = 0; i < getSetList.size(); i++) {
-			// System.out.println(getSetList.get(i).jc.getClassName());
-			// System.out.println(getSetList.get(i).m.getName());
+		removeOverriddenMethod(InheritanceList, getSetList);
+		for (GetSetInfo gi : getSetList) {
+			packageNameList.add(gi.jc.getPackageName());
+			classNameList.add(gi.jc.getClassName());
+			methodNameList.add(gi.getter.getName());
 		}
+		sortClass(classNameList, getSetList);
+		sortPackage(packageNameList);
+	}
 
-		for (int i = 0; i < overriddenMethodList.size(); i++) {
-			// System.out.println(overriddenMethodList.get(i).jc.getClassName());
-			// System.out.println(overriddenMethodList.get(i).m.getName());
+	private static void removeOverriddenMethod(
+			List<InheritanceInfo> InheritanceList, List<GetSetInfo> getSetList) {
+		for (InheritanceInfo il : InheritanceList) {
+			String ilSubName = il.subClass.getClassName();
+			String ilSuperName = il.superClass.getClassName();
+			String ilMethodName = il.method.getName();
+			String ilMethodSignature = il.method.getSignature();
+			for (int i = 0; i < getSetList.size(); i++) {
+				String className = getSetList.get(i).jc.getClassName();
+				String getterName = getSetList.get(i).getter.getName();
+				String setterName = getSetList.get(i).setter.getName();
+				String getSignatur = getSetList.get(i).getter.getSignature();
+				String setSignatur = getSetList.get(i).setter.getSignature();
+				if (ilMethodName.equals(getterName)
+						&& ilMethodSignature.equals(getSignatur)) {
+					if (ilSubName.equals(className)
+							|| ilSuperName.equals(className)) {
+						getSetList.remove(i);
+					}
+				} else if (ilMethodName.equals(setterName)
+						&& ilMethodSignature.equals(setSignatur)) {
+					if (ilSubName.equals(className)
+							|| ilSuperName.equals(className)) {
+						getSetList.remove(i);
+					}
+				}
+			}
 		}
 	}
 
@@ -58,13 +87,13 @@ public class GetterSetterFinder {
 		Collections.sort(sortResult);
 		Collections.reverse(sortResult);
 		for (int j = 0; j < sortResult.size(); j++) {
-			int count = Integer.valueOf(sortResult.get(j).substring(0, 10));
+			int count = Integer.valueOf(sortResult.get(j).substring(0, 10)) * 2;
 			System.out.println(sortResult.get(j).substring(10) + " : " + count);
 		}
 	}
 
 	private static void sortClass(List<String> classNames,
-			List<MethodInfo> methodNames) {
+			List<GetSetInfo> methodNames) {
 		List<String> listTemp = new ArrayList<String>();
 		System.out
 				.println("--------------------Class 별로 분류--------------------");
@@ -79,12 +108,13 @@ public class GetterSetterFinder {
 		Collections.sort(sortResult);
 		Collections.reverse(sortResult);
 		for (int j = 0; j < sortResult.size(); j++) {
-			int count = Integer.valueOf(sortResult.get(j).substring(0, 10));
+			int count = Integer.valueOf(sortResult.get(j).substring(0, 10)) * 2;
 			System.out.println(sortResult.get(j).substring(10) + " : " + count);
-			for (MethodInfo mi : methodNames) {
+			for (GetSetInfo mi : methodNames) {
 				if (mi.jc.getClassName()
 						.equals(sortResult.get(j).substring(10))) {
-					System.out.println("\t" + mi.m.getName());
+					System.out.println(mi.getter.getName());
+					System.out.println(mi.setter.getName());
 				}
 			}
 
@@ -92,18 +122,18 @@ public class GetterSetterFinder {
 	}
 
 	private static void findPureGetterSetter(List<JavaClass> classList,
-			List<MethodInfo[]> getSetList) {
+			List<GetSetInfo> getSetList) {
 		for (JavaClass jc : classList) {
 			Method[] methods = jc.getMethods();
-			for (Method method : methods) {
-				if (isPureSetter(method) || isPureGetter(method)) {
-					Method method2 = isOnlyGetter(methods, method);
-					if (method2 != null) {
-						System.out.println(method2);
-						System.out.println(method);
-						MethodInfo mi = new MethodInfo();
-						mi.jc = jc;
-						mi.m = method;
+			for (Method getter : methods) {
+				if (isPureGetter(getter)) {
+					Method setter = isOnlyGetter(methods, getter);
+					if (setter != null && isPureSetter(setter)) {
+						GetSetInfo gsInfo = new GetSetInfo();
+						gsInfo.jc = jc;
+						gsInfo.getter = getter;
+						gsInfo.setter = setter;
+						getSetList.add(gsInfo);
 					}
 				}
 			}
@@ -111,46 +141,82 @@ public class GetterSetterFinder {
 	}
 
 	private static void findOverriddenMethod(JavaClass subClass,
-			JavaClass superClass, List<MethodInfo> overriddenMethodList) {
-		Method[] subMethods = subClass.getMethods();
-		Method[] superMethods = superClass.getMethods();
-		for (Method subMethod : subMethods) {
-			for (Method superMethod : superMethods) {
-				if (subMethod.getName().equals(superMethod.getName())) {
-					if (subMethod.getSignature().equals(
-							superMethod.getSignature()))
-						if (!subMethod.getName().contains("<init>")
-								|| !superMethod.getName().contains("<init>")) {
-							MethodInfo miSuper = new MethodInfo();
-							MethodInfo miSub = new MethodInfo();
-							miSuper.jc = superClass;
-							miSuper.m = superMethod;
-							miSub.jc = subClass;
-							miSub.m = subMethod;
-							overriddenMethodList.add(miSuper);
-							overriddenMethodList.add(miSub);
+			JavaClass superClass, List<InheritanceInfo> overriddenMethodList) {
+		if (subClass != null && superClass != null) {
+			Method[] subMethods = subClass.getMethods();
+			Method[] superMethods = superClass.getMethods();
+			if (subMethods.length == 0 || superMethods.length == 0) {
+				for (Method subMethod : subMethods) {
+					for (Method superMethod : superMethods) {
+						if (subMethod.getName().equals(superMethod.getName())) {
+							if (subMethod.getSignature().equals(
+									superMethod.getSignature()))
+								if (!subMethod.getName().contains("<init>")
+										|| !superMethod.getName().contains(
+												"<init>")) {
+									InheritanceInfo iInfo = new InheritanceInfo();
+									iInfo.superClass = superClass;
+									iInfo.subClass = subClass;
+									iInfo.method = subMethod;
+									overriddenMethodList.add(iInfo);
+								}
 						}
+					}
 				}
 			}
 		}
 	}
 
-	private static void findSuperClass(List<JavaClass> classList,
-			JavaClass subClass, List<MethodInfo> overriddenMethodList) {
-		String superClassName = subClass.getSuperclassName();
-		for (JavaClass superClass : classList) {
-			if (superClassName.equals(superClass.getClassName())) {
-				findOverriddenMethod(subClass, superClass, overriddenMethodList);
+	private static void findSuperClass(List<JavaClass> classList, JavaClass jc,
+			List<InheritanceInfo> InheritanceList) {
+		String superName = jc.getSuperclassName();
+		while (true) {
+			JavaClass superClass = findSpecificClass(classList, superName);
+			if (superClass != null) {
+				superName = superClass.getSuperclassName();
+				if (!superClass.getSuperclassName().equals("java.lang.Object")) {
+					findOverriddenMethod(jc, superClass, InheritanceList);
+				} else {
+					findOverriddenMethod(jc, superClass, InheritanceList);
+					break;
+				}
+			} else {
+				break;
 			}
 		}
 	}
 
-	private static void findSubClass(List<JavaClass> classList,
-			List<MethodInfo> overriddenMethodList) {
+	private static JavaClass findSpecificClass(List<JavaClass> classList,
+			String className) {
+		JavaClass specificClass = null;
 		for (JavaClass jc : classList) {
+			if (jc.getClassName().equals(className)) {
+				specificClass = jc;
+			}
+		}
+		return specificClass;
+	}
+
+	private static void findInterface(List<JavaClass> classList, JavaClass jc,
+			List<InheritanceInfo> InheritanceList) {
+		String[] interfaceNames = jc.getInterfaceNames();
+		for (String interfaceName : interfaceNames) {
+			JavaClass interfaceClass = findSpecificClass(classList,
+					interfaceName);
+			findOverriddenMethod(jc, interfaceClass, InheritanceList);
+		}
+	}
+
+	private static void findSubClass(List<JavaClass> classList,
+			List<InheritanceInfo> InheritanceList) {
+		for (JavaClass jc : classList) {
+			String[] interfaceNames = jc.getInterfaceNames();
 			String superClassName = jc.getSuperclassName();
+			if (interfaceNames.length != 0) {
+				findInterface(classList, jc, InheritanceList);
+			}
 			if (!superClassName.equals("java.lang.Object")) {
-				findSuperClass(classList, jc, overriddenMethodList);
+				findSuperClass(classList, jc, InheritanceList);
 			}
 		}
 	}
@@ -326,8 +392,15 @@ public class GetterSetterFinder {
 		return resultMethod;
 	}
 
-	static class MethodInfo {
+	static class GetSetInfo {
 		JavaClass jc;
-		Method m;
+		Method getter;
+		Method setter;
+	}
+
+	static class InheritanceInfo {
+		JavaClass superClass;
+		JavaClass subClass;
+		Method method;
 	}
 }
